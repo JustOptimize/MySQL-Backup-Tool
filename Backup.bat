@@ -20,20 +20,28 @@ for /f "tokens=1-2 delims=/:" %%a in ("%TIME%") do (
 )
 
 :: Get the current date
-for /f "tokens=1-2 delims==" %%a in (
-'wmic OS Get localdatetime /value ^| find "="'
-) do (
-  if "%%a"=="Day" set "day=%%b"
-  if "%%a"=="Month" set "month=%%b"
-  if "%%a"=="Year" set "year=%%b"
-)
+for /f "delims=" %%a in ('wmic OS Get localdatetime ^| find "."') do set dt=%%a
+set year=%dt:~0,4%
+set month=%dt:~4,2%
+set day=%dt:~6,2%
 
 :: Get the month name
-set "monthname=Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec"
-for /f "tokens=%month% delims= " %%a in ("%monthname%") do set "monthname=%%a"
+set "monthname="
+if "%month%"=="01" set "monthname=Jan"
+if "%month%"=="02" set "monthname=Febr"
+if "%month%"=="03" set "monthname=Mar"
+if "%month%"=="04" set "monthname=Apr"
+if "%month%"=="05" set "monthname=May"
+if "%month%"=="06" set "monthname=Jun"
+if "%month%"=="07" set "monthname=Jul"
+if "%month%"=="08" set "monthname=Aug"
+if "%month%"=="09" set "monthname=Sept"
+if "%month%"=="10" set "monthname=Oct"
+if "%month%"=="11" set "monthname=Nov"
+if "%month%"=="12" set "monthname=Dec"
 
-:: Create the backup folder
-set "backupFolder=%backup_dir%(%month%) %day% %monthname% %year%"
+:: Create the backup folder C:\BackupsSQL\1 January 2014
+set "backupFolder=%backup_dir%\%day% %monthname% %year%\"
 if not exist "%backupFolder%" (
   mkdir "%backupFolder%"
 )
@@ -48,6 +56,9 @@ if defined mysql_password (
 
 :: Delete old files
 if "%delete_old_files%"=="true" (
-  forfiles /p "%backup_dir%" /s /m . /d -%delete_how_old_files% /c "cmd /c if @isdir==FALSE del @file"
-  for /f "delims=" %%d in ('dir /ad /b /s "%backup_dir%" ^| sort /R') do rd "%%d"
+  echo Deleting files older than %delete_how_old_files% days for %backup_dir%
+  forfiles -p %backup_dir% -s -m *.* -d -%delete_how_old_files% -c "cmd /c del @path"
+
+  echo Deleting empty folders
+  for /f "usebackq delims=" %%d in (`"dir %backup_dir% /ad/b/s"`) do rd "%%d"
 )
